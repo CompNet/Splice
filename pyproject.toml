@@ -1,0 +1,21 @@
+[tool.poetry]
+name = "splice"
+version = "0.1.0"
+description = ""
+authors = ["Aethor <oow.autre@gmail.com>"]
+license = "GPLv3"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.8,<3.11"
+renard-pipeline = { git = "https://github.com/CompNet/Renard", rev = "2653354" }
+tibert = { git = "https://github.com/CompNet/Tibert", rev = "d6729c1" }
+rich = "^13.7.0"
+sacred = "^0.8.5"
+scienceplots = "^2.1.1"
+openai = "^1.31.0"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
