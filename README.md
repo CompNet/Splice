@@ -101,3 +101,20 @@ python xp_e2e_llm_graphml.py with\
 | Figure 2 | `plot_ner_degradation_metrics.py`   |
 | Figure 3 | `plot_coref_degradation_metrics.py` |
 | Table 4  | `print_e2e_graph_results.py`        |
+
+
+# Extraction Gains
+
+## Gains with augmentation
+
+1. Setup the ddaugNER repository by running `setup_ddaugner.sh`
+2. launch experiment
+
+```sh
+# ensure you are in the correct python environment with `poetry shell`
+python xp_aug_gains.py
+```
+
+
+## Gains with retrieval
+

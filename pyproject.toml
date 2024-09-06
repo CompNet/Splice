@@ -8,8 +8,8 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.8,<3.11"
-renard-pipeline = { git = "https://github.com/CompNet/Renard", rev = "2653354" }
-tibert = { git = "https://github.com/CompNet/Tibert", rev = "d6729c1" }
+renard-pipeline = { git = "https://github.com/CompNet/Renard", rev = "552b5e8" }
+tibert = { git = "https://github.com/CompNet/Tibert", rev = "0619223" }
 rich = "^13.7.0"
 sacred = "^0.8.5"
 scienceplots = "^2.1.1"
