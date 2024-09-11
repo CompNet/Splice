@@ -12,15 +12,15 @@ def precision_recall_metrics(metrics: set[str]) -> set[str]:
 
 
 GMETRIC_2_PRETTYNAME = {
-    "node_f1": "$N_{F1}$",
-    "node_precision": "$N_{Pre}$",
-    "node_recall": "$N_{Rec}$",
-    "edge_f1": "$L_{F1}$",
-    "edge_precision": "$L_{Pre}$",
-    "edge_recall": "$L_{Rec}$",
-    "weighted_edge_f1": "$WL_{F1}$",
-    "weighted_edge_precision": "$WL_{Pre}$",
-    "weighted_edge_recall": "$WL_{Rec}$",
+    "node_f1": "$F1_V$",
+    "node_precision": "$Pre_V$",
+    "node_recall": "$Rec_V$",
+    "edge_f1": "$F1_E$",
+    "edge_precision": "$Pre_E$",
+    "edge_recall": "$Rec_E$",
+    "weighted_edge_f1": "$WF1_E$",
+    "weighted_edge_precision": "$WPre_E$",
+    "weighted_edge_recall": "$WRec_E$",
 }
 
 
@@ -91,9 +91,8 @@ if __name__ == "__main__":
         handles,
         labels,
         fancybox=True,
-        loc="center",
-        ncol=3,
-        bbox_to_anchor=(0.5, 1.2),
+        loc="upper left",
+        bbox_to_anchor=(0.925, 0.95),
         fontsize=FONTSIZE,
     )
 
