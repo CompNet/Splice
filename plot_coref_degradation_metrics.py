@@ -47,9 +47,9 @@ if __name__ == "__main__":
         "--run-dict",
         type=eval,
         default={
-            "add_spurious_coref_mention": "./runs/add_spurious_coref_mention/",
+            "add_spurious_mention": "./runs/add_spurious_mention/",
             "add_spurious_link": "./runs/add_spurious_link/",
-            "remove_correct_coref_mention": "./runs/remove_correct_coref_mention/",
+            "remove_correct_mention": "./runs/remove_correct_mention/",
             "remove_correct_link": "./runs/remove_correct_link/",
         },
     )

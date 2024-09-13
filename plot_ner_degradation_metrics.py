@@ -46,8 +46,8 @@ if __name__ == "__main__":
         "--run-dict",
         type=eval,
         default={
-            "add_spurious_ner_mention": "./runs/add_spurious_ner_mention",
-            "remove_correct_ner_mention": "./runs/remove_correct_ner_mention",
+            "add_spurious_alias_mention": "./runs/add_spurious_alias_mention",
+            "remove_correct_alias_mention": "./runs/remove_correct_alias_mention",
         },
     )
     parser.add_argument("-o", "--output", type=str)
