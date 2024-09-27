@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import List
 import pathlib as pl
 from dataclasses import dataclass
+from collections import defaultdict
 from renard.ner_utils import load_conll2002_bio
 from renard.gender import Gender
 from renard.pipeline.ner import NEREntity
@@ -15,7 +16,7 @@ class Novel:
     tokens: List[str]
     sents: List[List[str]]
     entities: List[NEREntity]
-    corefs: List[List[Mention]]
+    corefs: Optoinal[List[List[Mention]]]
     characters: List[Character]
 
     def cut(self, sents_len: int) -> Novel:
@@ -80,7 +81,7 @@ def extract_characters(
     return characters
 
 
-def load_novel(
+def load_litbank_novel(
     ner_path: pl.Path, coref_path: pl.Path, keep_only_NER_mentions: bool = False
 ) -> Novel:
     """
@@ -105,3 +106,48 @@ def load_novel(
     )
 
     return Novel(title, tokens, sents, entities, coref_chains, characters)
+
+
+def load_novelties_novel(
+    ner_paths: List[pl.Path], alias_resolution_path: pl.Path
+) -> Novel:
+
+    # extract NER data
+    novel_sents = []
+    novel_tokens = []
+    novel_entities = []
+    for ner_path in ner_paths:
+        sents, tokens, entities = load_conll2002_bio(str(ner_path), separator=" ")
+        novel_sents += sents
+        novel_tokens += tokens
+        novel_entities += entities
+
+    # entities are noted CHR in novelties, but Splice uses PER => we
+    # fix entity tags
+    for ent in novel_entities:
+        if ent.tag == "CHR":
+            ent.tag = "PER"
+
+    # extract alias resolution data
+    # { canonical form => form }
+    aliases = defaultdict(set)
+    ardf = pd.read_csv(alias_resolution_path)
+    for i, row in ardf.iterrows():
+        if i == 0:
+            title = row["Metadata"][6:]
+        aliases[row["Form"]].add(row["Entity"])
+
+    # parse alias resolution data into characters
+    characters = []
+    for _, forms in aliases.items():
+        mentions = []
+        for entity in novel_entities:
+            if entity.tag != "PER":
+                continue
+            if " ".join(entity.tokens) in forms:
+                mentions.append(
+                    Mention(entity.tokens, entity.start_idx, entity.end_idx)
+                )
+        characters.append(Character(frozenset(forms), mentions))
+
+    return Novel(title, tokens, sents, entities, None, characters)

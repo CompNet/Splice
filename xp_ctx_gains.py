@@ -34,7 +34,7 @@ from splice.graph_utils import shared_layout
 from splice.utils import mean_noNaN
 
 
-ex = Experiment("aug_gains", ingredients=[litbank_ingredient])
+ex = Experiment("aug_gains", ingredients=[novelties_ingredient])
 ex.observers.append(FileStorageObserver("./runs"))
 
 
@@ -62,7 +62,7 @@ def main(
 ):
     print_config(_run)
 
-    novels: List[Novel] = load_litbank()  # type: ignore
+    novels: List[Novel] = load_novelties()  # type: ignore
     _run.info["novels"] = [novel.title for novel in novels]
 
     co_occ_kwargs = {"co_occurrences_dist": (co_occurrences_dist, "tokens")}
