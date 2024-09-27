@@ -107,20 +107,7 @@ def main(
     ]
 
     pipelines = {
-        # "+coref-ctx": lambda: Pipeline(
-        #     [
-        #         BertNamedEntityRecognizer(),
-        #         BertCoreferenceResolver(
-        #             hugginface_model_id=coref_model_id,
-        #             block_size=99999,  # HACK
-        #         ),
-        #         GraphRulesCharacterUnifier(link_corefs_mentions=True),
-        #         CoOccurrencesGraphExtractor(**co_occ_kwargs),
-        #     ],
-        #     progress_report=None,
-        #     warn=False,
-        # ),
-        "-coref-ctx": lambda: Pipeline(
+        "-ctx": lambda: Pipeline(
             [
                 BertNamedEntityRecognizer(),
                 GraphRulesCharacterUnifier(),
@@ -129,43 +116,20 @@ def main(
             progress_report=None,
             warn=False,
         ),
-        # "+coref+ctx": lambda: Pipeline(
-        #     [
-        #         BertNamedEntityRecognizer(
-        #             context_retriever=NEREnsembleContextRetriever(
-        #                 [
-        #                     NERSamenounContextRetriever(8),
-        #                     NERBM25ContextRetriever(8),
-        #                     NERNeighborsContextRetriever(8 * 2),
-        #                 ],
-        #                 k=3,
-        #             )
-        #         ),
-        #         BertCoreferenceResolver(
-        #             hugginface_model_id=coref_model_id,
-        #             block_size=99999,  # HACK
-        #         ),
-        #         GraphRulesCharacterUnifier(link_corefs_mentions=True),
-        #         CoOccurrencesGraphExtractor(**co_occ_kwargs),
-        #     ],
-        #     progress_report=None,
-        #     warn=False,
-        # ),
-        "-coref+ctx": lambda: Pipeline(
+        "+ctx": lambda: Pipeline(
             [
                 BertNamedEntityRecognizer(
-                    # context_retriever=NEREnsembleContextRetriever(
-                    #     [
-                    #         # NERSamenounContextRetriever(8),
-                    #         # NERBM25ContextRetriever(8),
-                    #         # NERNeighborsContextRetriever(8 * 2),
-                    #         NERSamenounContextRetriever(4),
-                    #         NERBM25ContextRetriever(4),
-                    #         NERNeighborsContextRetriever(4 * 2),
-                    #     ],
-                    #     k=1,
-                    # )
-                    context_retriever=NERSamenounContextRetriever(3)
+                    context_retriever=NEREnsembleContextRetriever(
+                        [
+                            # NERSamenounContextRetriever(8),
+                            # NERBM25ContextRetriever(8),
+                            # NERNeighborsContextRetriever(8 * 2),
+                            NERSamenounContextRetriever(4),
+                            NERBM25ContextRetriever(4),
+                            NERNeighborsContextRetriever(4 * 2),
+                        ],
+                        k=1,
+                    )
                 ),
                 GraphRulesCharacterUnifier(),
                 CoOccurrencesGraphExtractor(**co_occ_kwargs),
@@ -219,16 +183,6 @@ def main(
             store_log_(novel, "ner_precision", ner_precision, pipeline_name)
             store_log_(novel, "ner_recall", ner_recall, pipeline_name)
             store_log_(novel, "ner_f1", ner_f1, pipeline_name)
-
-            # Coref metrics
-            # -------------
-            if "+coref" in pipeline_name:
-                coref_metrics = score_coref(novel.tokens, out.corefs, out_gold.corefs)
-                for metric_name, metric_dict in coref_metrics.items():
-                    for metric_key, value in metric_dict.items():
-                        store_log_(
-                            novel, f"{metric_name}_{metric_key}", value, pipeline_name
-                        )
 
             # Character unification / graph metrics
             # -------------------------------------
