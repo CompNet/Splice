@@ -1,6 +1,5 @@
 # Splice
-
-# The Role of Information Extraction Tasks in Automatic Literary Character Network Construction
+*The Role of Information Extraction Tasks in Automatic Literary Character Network Construction*
 
 ## Reproducing Results
 
