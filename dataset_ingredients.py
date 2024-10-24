@@ -7,7 +7,7 @@ from flatten_litbank_ner import flatten_litbank_ner_
 from splice.data import Novel, load_litbank_novel, load_novelties_novel
 
 litbank_ingredient = Ingredient("litbank")
-novelties_ingredient = Ingredient("Novelties")
+novelties_ingredient = Ingredient("novelties")
 
 
 @litbank_ingredient.config
@@ -57,4 +57,5 @@ def load_novelties(root: str) -> List[Novel]:
             noveldir / "alias_resolution.csv",
         )
         for noveldir in track(noveldirs)
+        if (noveldir / "alias_resolution.csv").is_file()
     ]

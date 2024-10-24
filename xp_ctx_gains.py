@@ -20,7 +20,7 @@ from renard.pipeline.corefs import BertCoreferenceResolver
 from renard.pipeline.character_unification import GraphRulesCharacterUnifier
 from renard.pipeline.graph_extraction import CoOccurrencesGraphExtractor
 from torch import select_scatter
-from dataset_ingredients import litbank_ingredient, load_litbank
+from dataset_ingredients import novelties_ingredient, load_novelties
 from splice.data import Novel
 from splice.sacred_utils import archive_pipeline_state_, archive_graph_
 from splice.metrics import (

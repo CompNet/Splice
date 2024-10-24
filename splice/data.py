@@ -1,11 +1,15 @@
 from __future__ import annotations
-from typing import List
+from typing import List, Optional, Dict, Tuple
+import os, re
 import pathlib as pl
 from dataclasses import dataclass
+from more_itertools import flatten
 from collections import defaultdict
+import pandas as pd
 from renard.ner_utils import load_conll2002_bio
 from renard.gender import Gender
 from renard.pipeline.ner import NEREntity
+from renard.ner_utils import ner_entities
 from renard.pipeline.character_unification import Character
 from tibert.bertcoref import Mention, CoreferenceDataset
 
@@ -16,7 +20,7 @@ class Novel:
     tokens: List[str]
     sents: List[List[str]]
     entities: List[NEREntity]
-    corefs: Optoinal[List[List[Mention]]]
+    corefs: Optional[List[List[Mention]]]
     characters: List[Character]
 
     def cut(self, sents_len: int) -> Novel:
@@ -108,16 +112,69 @@ def load_litbank_novel(
     return Novel(title, tokens, sents, entities, coref_chains, characters)
 
 
+def load_novelties_conll2002_bio(
+    path: str,
+    tag_conversion_map: Optional[Dict[str, str]] = None,
+    separator: str = "\t",
+    **kwargs,
+) -> Tuple[List[List[str]], List[str], List[NEREntity]]:
+    """Load a file under CoNLL2022 BIO format.  Sentences are expected
+    to be separated by end of lines.  Tags should be in the CoNLL-2002
+    format (such as 'B-PER I-PER') - If this is not the case, see the
+    ``tag_conversion_map`` argument.
+
+    :param path: path to the CoNLL-2002 formatted file
+    :param separator: separator between token and BIO tags
+    :param tag_conversion_map: conversion map for tags found in the
+        input file.  Example : ``{'B': 'B-PER', 'I': 'I-PER'}``
+    :param kwargs: additional kwargs for ``open`` (such as
+        ``encoding`` or ``newline``).
+
+    :return: ``(sentences, tokens, entities)``
+    """
+    tag_conversion_map = tag_conversion_map or {}
+
+    with open(os.path.expanduser(path), **kwargs) as f:
+        raw_data = f.read()
+
+    sents = []
+    sent_tokens = []
+    tags = []
+    for line in raw_data.split("\n"):
+        line = line.strip("\n")
+        try:
+            token, tag = line.split(separator)
+        except ValueError:
+            continue
+        sent_tokens.append(token)
+        tags.append(tag_conversion_map.get(tag, tag))
+        if token in [".", "!", "?"]:
+            if len(sent_tokens) == 0:
+                continue
+            sents.append(sent_tokens)
+            sent_tokens = []
+    if not len(sent_tokens) == 0:
+        sents.append(sent_tokens)
+
+    tokens = list(flatten(sents))
+    entities = ner_entities(tokens, tags)
+
+    return sents, tokens, entities
+
+
 def load_novelties_novel(
     ner_paths: List[pl.Path], alias_resolution_path: pl.Path
 ) -> Novel:
+    title = ner_paths[0].name.split(".")[0]
 
     # extract NER data
     novel_sents = []
     novel_tokens = []
     novel_entities = []
     for ner_path in ner_paths:
-        sents, tokens, entities = load_conll2002_bio(str(ner_path), separator=" ")
+        sents, tokens, entities = load_novelties_conll2002_bio(
+            str(ner_path), separator=" "
+        )
         novel_sents += sents
         novel_tokens += tokens
         novel_entities += entities
@@ -150,4 +207,4 @@ def load_novelties_novel(
                 )
         characters.append(Character(frozenset(forms), mentions))
 
-    return Novel(title, tokens, sents, entities, None, characters)
+    return Novel(title, novel_tokens, novel_sents, novel_entities, None, characters)
