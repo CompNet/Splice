@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Callable, Literal, Optional, Tuple
+from typing import Callable, Literal, Optional, Tuple, List
 import math
 from copy import deepcopy
 from collections import defaultdict
@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from seqeval.metrics import precision_score, recall_score, f1_score
 from renard.pipeline.core import Pipeline, PipelineState, PipelineStep
+from renard.pipeline.ner import NEREntity
 from renard.pipeline.character_unification import GraphRulesCharacterUnifier
 from renard.pipeline.graph_extraction import CoOccurrencesGraphExtractor
 from tibert.bertcoref import CoreferenceDocument
@@ -207,83 +208,77 @@ def compute_metrics_over_ner_degradation(
     ner_metrics_dict = defaultdict(list)
     graph_metrics_dict = defaultdict(list)
 
-    err = False
+    def store_metrics_(state: PipelineState):
+        pred_tags = entities_to_BIO(state.tokens, state.entities)
+        ref_tags = entities_to_BIO(state.tokens, ner_ref)
+
+        # seqeval returns 0 or 1 for undefined recall/precision
+        # depending on the configuration. However, we would like
+        # to explicitely mark these undefined values: therefore,
+        # in the case of undefined metrics, we report NaN instead.
+        if len(state.entities) == 0:
+            precision = float("nan")
+        else:
+            precision = precision_score([ref_tags], [pred_tags])
+        ner_metrics_dict["precision"].append(precision)
+
+        if len(ner_ref) == 0:
+            recall = float("nan")
+        else:
+            recall = recall_score([ref_tags], [pred_tags])
+        ner_metrics_dict["recall"].append(recall)
+
+        node_p, node_r, node_f1 = score_character_unification(
+            [character.names for character in state_gold.characters],
+            [character.names for character in state.characters],
+        )
+        graph_metrics_dict["node_f1"].append(node_f1)
+        graph_metrics_dict["node_precision"].append(node_p)
+        graph_metrics_dict["node_recall"].append(node_r)
+
+        mapping, _ = align_characters(state_gold.characters, state.characters)
+        edge_p, edge_r, edge_f1 = score_network_extraction_edges(
+            state_gold.character_network,
+            state.character_network,
+            mapping,
+            weighted=False,
+        )
+        graph_metrics_dict["edge_f1"].append(edge_f1)
+        graph_metrics_dict["edge_precision"].append(edge_p)
+        graph_metrics_dict["edge_recall"].append(edge_r)
+        wedge_p, wedge_r, wedge_f1 = score_network_extraction_edges(
+            state_gold.character_network,
+            state.character_network,
+            mapping,
+            weighted=True,
+        )
+        graph_metrics_dict["weighted_edge_f1"].append(wedge_f1)
+        graph_metrics_dict["weighted_edge_precision"].append(wedge_p)
+        graph_metrics_dict["weighted_edge_recall"].append(wedge_r)
+
+    def try_run_() -> PipelineState:
+        try:
+            new_state = pipeline.rerun_from(state, cu_step.__class__)
+        except Exception as e:
+            print(e)
+            for k in graph_metrics_dict.keys():
+                graph_metrics_dict[k].append(0)
+            new_state = None
+        return new_state
+
+    store_metrics_(state)
 
     for i in tqdm(list(range(degradation_steps))):
-        if i % int(1 / report_frequency) == 0:
-            pred_tags = entities_to_BIO(state.tokens, ner_pred)
-            ref_tags = entities_to_BIO(state.tokens, ner_ref)
 
-            # seqeval returns 0 or 1 for undefined recall/precision
-            # depending on the configuration. However, we would like
-            # to explicitely mark these undefined values: therefore,
-            # in the case of undefined metrics, we report NaN instead.
-            if len(ner_pred) == 0:
-                precision = float("nan")
-            else:
-                precision = precision_score([ref_tags], [pred_tags])
-            ner_metrics_dict["precision"].append(precision)
-
-            if len(ner_ref) == 0:
-                recall = float("nan")
-            else:
-                recall = recall_score([ref_tags], [pred_tags])
-            ner_metrics_dict["recall"].append(recall)
-
-            if math.isnan(precision) or math.isnan(recall) or precision + recall == 0.0:
-                f1 = float("nan")
-            else:
-                f1 = f1_score([ref_tags], [pred_tags])
-            ner_metrics_dict["f1"].append(f1)
-
-            state.entities = ner_pred
-
-            try:
-                state = pipeline.rerun_from(state, cu_step.__class__)
-            except Exception as e:
-                if not err:
-                    print(e)
-                    err = True
-                for k in graph_metrics_dict.keys():
-                    graph_metrics_dict[k].append(0)
-                continue
-
-            assert not state.tokens is None
-            assert not state.characters is None
-            assert not state_gold.characters is None
-
-            node_p, node_r, node_f1 = score_character_unification(
-                [character.names for character in state_gold.characters],
-                [character.names for character in state.characters],
-            )
-            graph_metrics_dict["node_f1"].append(node_f1)
-            graph_metrics_dict["node_precision"].append(node_p)
-            graph_metrics_dict["node_recall"].append(node_r)
-
-            mapping, _ = align_characters(state_gold.characters, state.characters)
-            edge_p, edge_r, edge_f1 = score_network_extraction_edges(
-                state_gold.character_network,
-                state.character_network,
-                mapping,
-                weighted=False,
-            )
-            graph_metrics_dict["edge_f1"].append(edge_f1)
-            graph_metrics_dict["edge_precision"].append(edge_p)
-            graph_metrics_dict["edge_recall"].append(edge_r)
-            wedge_p, wedge_r, wedge_f1 = score_network_extraction_edges(
-                state_gold.character_network,
-                state.character_network,
-                mapping,
-                weighted=True,
-            )
-            graph_metrics_dict["weighted_edge_f1"].append(wedge_f1)
-            graph_metrics_dict["weighted_edge_precision"].append(wedge_p)
-            graph_metrics_dict["weighted_edge_recall"].append(wedge_r)
-
+        old_ner_pred = deepcopy(ner_pred)
         ner_pred = deteriorate_ner(
             state.tokens, ner_pred, ner_ref, actions=degradation_actions
         )
         if ner_pred is None:
+            state.entities = old_ner_pred
+            state = try_run_()
+            if not state is None:
+                store_metrics_(state)
             measurement_steps = int(degradation_steps * report_frequency)
             current_measurement_steps = len(list(graph_metrics_dict.values())[0])
             remaining_measurement_steps = int(
@@ -294,6 +289,12 @@ def compute_metrics_over_ner_degradation(
             for k, v in ner_metrics_dict.items():
                 ner_metrics_dict[k] += [v[-1]] * remaining_measurement_steps
             break
+
+        if i % int(1 / report_frequency) == 0:
+            state.entities = ner_pred
+            state = try_run_()
+            if not state is None:
+                store_metrics_(state)
 
     return ner_metrics_dict, graph_metrics_dict
 
