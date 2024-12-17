@@ -195,7 +195,7 @@ def compute_metrics_over_ner_degradation(
         progress_report=None,
     )
     # necessary since we only use pipeline.rerun_from
-    pipeline._pipeline_init_steps()
+    pipeline._pipeline_init_steps_()
 
     state = deepcopy(state_gold)
     assert not state.tokens is None
